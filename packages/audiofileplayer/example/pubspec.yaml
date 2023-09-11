@@ -11,13 +11,14 @@ dependencies:
 
   logging: ^1.0.0
   path_provider: ^2.0.1
+  audiofileplayer:
+    path: ../
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_lints: ^2.0.3
 
-  audiofileplayer:
-    path: ../
 
 # For information on the generic Dart part of this file, see the
 # following page: https://www.dartlang.org/tools/pub/pubspec

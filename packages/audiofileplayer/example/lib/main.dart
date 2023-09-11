@@ -3,21 +3,23 @@ import 'dart:math';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
-import 'package:audiofileplayer/audiofileplayer.dart';
 import 'package:audiofileplayer/audio_system.dart';
-import 'package:logging/logging.dart';
+import 'package:audiofileplayer/audiofileplayer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:logging/logging.dart';
 import 'package:path_provider/path_provider.dart';
 
 final Logger _logger = Logger('audiofileplayer_example');
 
-void main() => runApp(MyApp());
+void main() => runApp(const MyApp());
 
 /// This app shows several use cases for the audiofileplayer plugin.
 class MyApp extends StatefulWidget {
+  const MyApp({Key? key}) : super(key: key);
+
   @override
-  _MyAppState createState() => _MyAppState();
+  createState() => _MyAppState();
 }
 
 class _MyAppState extends State<MyApp> {
@@ -282,8 +284,8 @@ class _MyAppState extends State<MyApp> {
     final HSLColor fgHslColor =
         HSLColor.fromAHSL(1.0, fgHue, random.nextDouble() * .5 + .5, .5);
 
-    final Size size = const Size(200.0, 200.0);
-    final Offset center = const Offset(100.0, 100.0);
+    const Size size = Size(200.0, 200.0);
+    const Offset center = Offset(100.0, 100.0);
     final ui.PictureRecorder recorder = ui.PictureRecorder();
     final Rect rect = Offset.zero & size;
     final Canvas canvas = Canvas(recorder, rect);
@@ -436,7 +438,7 @@ class _MyAppState extends State<MyApp> {
                     }),
           _remoteErrorMessage != null
               ? Text(_remoteErrorMessage!,
-                  style: const TextStyle(color: const Color(0xFFFF0000)))
+                  style: const TextStyle(color: Color(0xFFFF0000)))
               : Text(_remoteAudioLoading ? 'loading...' : 'loaded')
         ]),
         _cardWrapper(<Widget>[
@@ -466,7 +468,7 @@ class _MyAppState extends State<MyApp> {
           }),
           if (_documentErrorMessage != null)
             Text(_documentErrorMessage!,
-                style: const TextStyle(color: const Color(0xFFFF0000)))
+                style: const TextStyle(color: Color(0xFFFF0000)))
         ]),
         if (Platform.isIOS)
           _cardWrapper(<Widget>[

@@ -1,9 +1,9 @@
 import 'dart:ui' show AppLifecycleState;
 
+import 'package:audiofileplayer/audiofileplayer.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart' show WidgetsFlutterBinding;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:audiofileplayer/audiofileplayer.dart';
 
 const double _defaultPositionSeconds = 5.0;
 const double _defaultDurationSeconds = 10.0;
@@ -17,8 +17,7 @@ void main() {
     setUp(() async {
       // Ensures that Audio objects are able to call WidgetBinder.instance.
       WidgetsFlutterBinding.ensureInitialized();
-      audioMethodChannel
-          .setMockMethodCallHandler((MethodCall methodCall) async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(audioMethodChannel, (methodCall) {
         methodCalls.add(methodCall);
         if (_throwExceptionOnNextMethodCall) {
           _throwExceptionOnNextMethodCall = false;
@@ -27,24 +26,19 @@ void main() {
             message: _exceptionMessage,
           );
         }
+        return null;
       });
       methodCalls.clear();
     });
 
-    Future<void> _mockOnCompleteCall(String audioId) => Audio.handleMethodCall(
-        MethodCall(onCompleteCallback, <String, dynamic>{audioIdKey: audioId}));
+    Future<void> _mockOnCompleteCall(String audioId) =>
+        Audio.handleMethodCall(MethodCall(onCompleteCallback, <String, dynamic>{audioIdKey: audioId}));
 
-    Future<void> _mockOnDurationCall(String audioId) =>
-        Audio.handleMethodCall(MethodCall(onDurationCallback, <String, dynamic>{
-          audioIdKey: audioId,
-          durationSecondsKey: _defaultDurationSeconds
-        }));
+    Future<void> _mockOnDurationCall(String audioId) => Audio.handleMethodCall(
+        MethodCall(onDurationCallback, <String, dynamic>{audioIdKey: audioId, durationSecondsKey: _defaultDurationSeconds}));
 
-    Future<void> _mockOnPositionCall(String audioId) =>
-        Audio.handleMethodCall(MethodCall(onPositionCallback, <String, dynamic>{
-          audioIdKey: audioId,
-          positionSecondsKey: _defaultPositionSeconds
-        }));
+    Future<void> _mockOnPositionCall(String audioId) => Audio.handleMethodCall(
+        MethodCall(onPositionCallback, <String, dynamic>{audioIdKey: audioId, positionSecondsKey: _defaultPositionSeconds}));
 
     test('one-shot playback, with dispose() before playback completion', () {
       Audio.load('foo.wav')
@@ -127,9 +121,7 @@ void main() {
       double? duration;
       double? position;
       Audio.load('foo.wav',
-          onComplete: () => onCompleteCalled = true,
-          onDuration: (double d) => duration = d,
-          onPosition: (double p) => position = p)
+          onComplete: () => onCompleteCalled = true, onDuration: (double d) => duration = d, onPosition: (double p) => position = p)
         ..play()
         ..dispose();
       // Check that the Audio instance is retained by the Audio class while
@@ -176,9 +168,7 @@ void main() {
       double? duration;
       double? position;
       Audio.load('foo.wav',
-          onComplete: () => onCompleteCalled = true,
-          onDuration: (double d) => duration = d,
-          onPosition: (double p) => position = p)
+          onComplete: () => onCompleteCalled = true, onDuration: (double d) => duration = d, onPosition: (double p) => position = p)
         ..play()
         ..removeCallbacks()
         ..dispose();
@@ -216,8 +206,7 @@ void main() {
       expect(methodCalls[2].method, releaseMethod);
     });
 
-    test('should pause audio when app is paused and resume when app is resumed',
-        () {
+    test('should pause audio when app is paused and resume when app is resumed', () {
       final Audio audio = Audio.load('foo.wav')
         ..play()
         ..dispose();
@@ -247,9 +236,7 @@ void main() {
       expect(Audio.playingAudiosCount, 0);
     });
 
-    test(
-        'on app pause/resume, should not do anything with a completed & disposed audio.',
-        () {
+    test('on app pause/resume, should not do anything with a completed & disposed audio.', () {
       final Audio audio = Audio.load('foo.wav')
         ..play()
         ..dispose();
@@ -297,8 +284,7 @@ void main() {
 
     test('PlatformException is caught and calls onError()', () {
       _throwExceptionOnNextMethodCall = true;
-      final dynamic errorHandler = expectAsync1<dynamic, String>(
-          (String message) => expect(message, _exceptionMessage));
+      final dynamic errorHandler = expectAsync1<dynamic, String>((String message) => expect(message, _exceptionMessage));
       Audio.load('foo.wav', onError: errorHandler);
     });
 
