@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:audiofileplayer/audio_system.dart';
+import 'package:audiofileplayer/mux_config.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:logging/logging.dart';
@@ -497,15 +498,13 @@ class Audio with WidgetsBindingObserver {
     await _playHelper(playFromStart: true, endpointSeconds: endpointSeconds);
   }
 
-  Future<void> setupMux({double? endpointSeconds}) async {
+  Future<void> setupMux({required MuxConfig muxConfig}) async {
     if (!_undisposedAudios.containsKey(_audioId)) {
       _logger.severe('Called setupMux() on a disposed Audio');
       return;
     }
     try {
-      //TODO(adbysantos): Serializar o objeto MuxConfig
-      final args = <String, dynamic>{};
-      if (endpointSeconds != null) args[endpointSecondsKey] = endpointSeconds;
+      final args = muxConfig.toMap();
       await _sendMethodCall(_audioId, setupMuxMethod, args);
     } on PlatformException catch (e) {
       if (_usingOnErrorAudios.containsKey(_audioId)) {
