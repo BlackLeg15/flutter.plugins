@@ -101,6 +101,16 @@ abstract class ManagedMediaPlayer
     }
   }
 
+  /**
+   * Plays the audio.
+   *
+   * @param args the time, in milleseconds, to play to. To play until the end, pass {@link
+   *     #PLAY_TO_END}.
+   */
+  public void setupMux(Object args) {
+
+  }
+
   /** Releases the underlying MediaPlayer. */
   public void release() {
     player.stop();
