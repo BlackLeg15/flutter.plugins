@@ -16,17 +16,14 @@ rootProject.allprojects {
     repositories {
         google()
         mavenCentral()
-
-        flatDir {
-            dirs("libs")
-        }
     }
 }
 
 apply plugin: 'com.android.library'
 
 android {
-    compileSdkVersion 31
+    namespace 'com.google.flutter.plugins.audiofileplayer'
+    compileSdk 34
 	
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
@@ -34,7 +31,7 @@ android {
     }
 
     defaultConfig {
-        minSdkVersion 16
+        minSdkVersion 19
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
     lintOptions {
@@ -45,5 +42,4 @@ android {
 dependencies {
     implementation 'androidx.core:core:1.12.0'
     implementation 'androidx.media:media:1.6.0'
-    implementation(name:'mux', ext:'aar')
 }
