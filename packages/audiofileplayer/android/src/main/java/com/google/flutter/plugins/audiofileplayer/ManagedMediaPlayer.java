@@ -4,13 +4,7 @@ import android.media.MediaPlayer;
 import android.os.Handler;
 import android.util.Log;
 
-import com.mux.stats.sdk.core.model.CustomData;
-import com.mux.stats.sdk.core.model.CustomerData;
-import com.mux.stats.sdk.core.model.CustomerPlayerData;
-import com.mux.stats.sdk.core.model.CustomerVideoData;
-
 import java.lang.ref.WeakReference;
-import java.util.Map;
 
 /** Base class for wrapping a MediaPlayer for use by AudiofileplayerPlugin. */
 abstract class ManagedMediaPlayer
@@ -106,93 +100,6 @@ abstract class ManagedMediaPlayer
       player.start();
       handler.postDelayed(pauseAtEndpointRunnable, durationMs);
     }
-  }
-
-  /**
-   * Plays the audio.
-   *
-   * @param args the time, in milleseconds, to play to. To play until the end, pass {@link
-   *     #PLAY_TO_END}.
-   */
-  public void setupMux(Map<String, Object> args) {
-    VideoPlayer player = videoPlayers.get(arg.getTextureId());
-    CustomerPlayerData playerData = new CustomerPlayerData();
-    CustomerVideoData videoData = new CustomerVideoData();
-    CustomData customData = new CustomData();
-
-    CustomerData customerData = new CustomerData();
-
-    playerData.setEnvironmentKey(arg.getEnvKey());
-    playerData.setPlayerName(arg.getPlayerName());
-    videoData.setVideoSourceUrl(videoSource);
-
-    if (arg.getViewerUserId() != null)
-      playerData.setViewerUserId(arg.getViewerUserId());
-
-    if (arg.getExperimentName() != null)
-      playerData.setExperimentName(arg.getExperimentName());
-
-    if (arg.getPlayerVersion() != null)
-      playerData.setPlayerVersion(arg.getPlayerVersion());
-
-    if (arg.getPageType() != null)
-      playerData.setPageType(arg.getPageType());
-
-    if (arg.getSubPropertyId() != null)
-      playerData.setSubPropertyId(arg.getSubPropertyId());
-
-    if (arg.getPlayerInitTime() != null)
-      playerData.setPlayerInitTime(arg.getPlayerInitTime());
-
-    if (arg.getVideoId() != null)
-      videoData.setVideoId(arg.getVideoId());
-
-    if (arg.getVideoTitle() != null)
-      videoData.setVideoTitle(arg.getVideoTitle());
-
-    if (arg.getVideoSeries() != null)
-      videoData.setVideoSeries(arg.getVideoSeries());
-
-    if (arg.getVideoVariantName() != null)
-      videoData.setVideoVariantName(arg.getVideoVariantName());
-
-    if (arg.getVideoVariantId() != null)
-      videoData.setVideoVariantId(arg.getVideoVariantId());
-
-    if (arg.getVideoLanguageCode() != null)
-      videoData.setVideoLanguageCode(arg.getVideoLanguageCode());
-
-    if (arg.getVideoContentType() != null)
-      videoData.setVideoContentType(arg.getVideoContentType());
-
-    if (arg.getVideoStreamType() != null)
-      videoData.setVideoStreamType(arg.getVideoStreamType());
-
-    if (arg.getVideoProducer() != null)
-      videoData.setVideoProducer(arg.getVideoProducer());
-
-    if (arg.getVideoEncodingVariant() != null)
-      videoData.setVideoEncodingVariant(arg.getVideoEncodingVariant());
-
-    if (arg.getVideoCdn() != null)
-      videoData.setVideoCdn(arg.getVideoCdn());
-
-    if (arg.getVideoDuration() != null) {
-      videoData.setVideoDuration(castVideoDuration(arg.getVideoDuration()));
-    }
-
-    if (arg.getCustomData1() != null)
-      customData.setCustomData1(arg.getCustomData1());
-
-    if (arg.getCustomData2() != null)
-      customData.setCustomData2(arg.getCustomData2());
-
-    customerData.setCustomerVideoData(videoData);
-    customerData.setCustomerPlayerData(playerData);
-    customerData.setCustomData(customData);
-
-    muxStatsExoPlayer = new MuxStatsExoPlayer(flutterState.applicationContext, player.exoPlayer,
-            arg.getEnvKey(), customerData);
   }
 
   /** Releases the underlying MediaPlayer. */

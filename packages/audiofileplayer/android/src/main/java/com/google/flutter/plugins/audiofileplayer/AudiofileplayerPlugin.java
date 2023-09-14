@@ -11,6 +11,7 @@ import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.media.AudioManager;
+import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.RemoteException;
 import android.support.v4.media.MediaBrowserCompat;
@@ -23,6 +24,11 @@ import android.view.KeyEvent;
 import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
 import androidx.media.session.MediaButtonReceiver;
+
+import com.mux.stats.sdk.core.model.CustomerPlayerData;
+import com.mux.stats.sdk.core.model.CustomerVideoData;
+import com.mux.stats.sdk.muxstats.mediaplayer.MuxStatsMediaPlayer;
+
 import io.flutter.FlutterInjector;
 import io.flutter.embedding.engine.loader.FlutterLoader;
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
@@ -67,7 +73,6 @@ public class AudiofileplayerPlugin
   private static final String RELEASE_METHOD = "release";
   private static final String PLAY_METHOD = "play";
   private static final String SETUP_MUX_METHOD = "setupMux";
-  private static final String MUX_CONFIG = "muxConfig";
   private static final String PLAY_FROM_START = "playFromStart";
   private static final String ENDPOINT_SECONDS = "endpointSeconds";
   private static final String SEEK_METHOD = "seek";
@@ -130,6 +135,8 @@ public class AudiofileplayerPlugin
 
   private MediaBrowserCompat mediaBrowser;
   private MediaControllerCompat mediaController;
+  private String remoteUrl = "";
+  private MuxStatsMediaPlayer muxStatsMediaPlayer;
 
   private void registerLifecycleCallbacks(Activity activity) {
     LifecycleCallbacks callbacks = new LifecycleCallbacks(this, activity.hashCode());
@@ -163,6 +170,7 @@ public class AudiofileplayerPlugin
     mediaPlayers.clear();
     mediaPlayers = null;
     context = null;
+    muxStatsMediaPlayer.release();
   }
 
   private void attachToActivity(ActivityPluginBinding activityPluginBinding) {
@@ -247,8 +255,10 @@ public class AudiofileplayerPlugin
     // All subsequent calls need a valid player.
     ManagedMediaPlayer player = getAndVerifyPlayer(call, result);
     if(call.method.equals(SETUP_MUX_METHOD)){
-      Map<String, Object> args = call.argument(MUX_CONFIG);
-      player.setupMux(args);
+      Map<String, Object> args = call.arguments();
+      assert player != null;
+      assert args != null;
+      setupMux(args, player.player);
     }
     else if (call.method.equals(PLAY_METHOD)) {
       Boolean playFromStartBoolean = call.argument(PLAY_FROM_START);
@@ -269,6 +279,7 @@ public class AudiofileplayerPlugin
       }
       result.success(null);
     } else if (call.method.equals(RELEASE_METHOD)) {
+      muxStatsMediaPlayer.release();
       player.release();
       mediaPlayers.remove(player.getAudioId());
       result.success(null);
@@ -293,6 +304,115 @@ public class AudiofileplayerPlugin
     } else {
       result.notImplemented();
     }
+  }
+
+  public void setupMux(Map<String, Object> arg, MediaPlayer player) {
+    CustomerPlayerData playerData = new CustomerPlayerData();
+    CustomerVideoData videoData = new CustomerVideoData();
+//    CustomData customData = new CustomData();
+
+//    CustomerData customerData = new CustomerData();
+
+    playerData.setEnvironmentKey((String) arg.get("envKey"));
+    playerData.setPlayerName((String) arg.get("playerName"));
+    videoData.setVideoSourceUrl(remoteUrl);
+
+    String viewerUserId = (String) arg.get("viewerUserId");
+
+    if (viewerUserId != null)
+      playerData.setViewerUserId(viewerUserId);
+
+    String pageType = (String) arg.get("pageType");
+
+    if (pageType != null)
+      playerData.setPageType(pageType);
+
+    String experimentName = (String) arg.get("experimentName");
+
+    if (experimentName != null)
+      playerData.setExperimentName(experimentName);
+
+    String subPropertyId = (String) arg.get("subPropertyId");
+
+    if (subPropertyId != null)
+      playerData.setSubPropertyId(subPropertyId);
+
+//    String playerVersion = (String) arg.get("playerVersion");
+//
+//    if (playerVersion != null)
+//      playerData.setPlayerVersion(playerVersion);
+
+    Long playerInitTime = (Long) arg.get("playerInitTime");
+
+    if (playerInitTime != null)
+      playerData.setPlayerInitTime(playerInitTime);
+
+    String videoId = (String) arg.get("videoId");
+
+    if (videoId != null)
+      videoData.setVideoId(videoId);
+
+    String videoTitle = (String) arg.get("videoTitle");
+
+    if (videoTitle != null)
+      videoData.setVideoTitle(videoTitle);
+
+    String videoSeries = (String) arg.get("videoSeries");
+
+    if (videoSeries != null)
+      videoData.setVideoSeries(videoSeries);
+
+//    String videoVariantName = (String) arg.get("videoVariantName");
+//
+//    if (arg.getVideoVariantName() != null)
+//      videoData.setVideoVariantName(arg.getVideoVariantName());
+
+//    if (arg.getVideoVariantId() != null)
+//      videoData.setVideoVariantId(arg.getVideoVariantId());
+
+//    if (arg.getVideoLanguageCode() != null)
+//      videoData.setVideoLanguageCode(arg.getVideoLanguageCode());
+
+    String videoContentType = (String) arg.get("videoContentType");
+
+    if (videoContentType != null)
+      videoData.setVideoContentType(videoContentType);
+
+    String videoStreamType = (String) arg.get("videoStreamType");
+
+    if (videoStreamType != null)
+      videoData.setVideoStreamType(videoStreamType);
+
+    String videoProducer = (String) arg.get("videoProducer");
+
+    if (videoProducer != null)
+      videoData.setVideoProducer(videoProducer);
+
+//    if (arg.getVideoEncodingVariant() != null)
+//      videoData.setVideoEncodingVariant(arg.getVideoEncodingVariant());
+
+    String videoCdn = (String) arg.get("videoCdn");
+
+    if (videoCdn != null)
+      videoData.setVideoCdn(videoCdn);
+
+    Long videoDuration = (Long) arg.get("videoDuration");
+
+    if (videoDuration != null) {
+      videoData.setVideoDuration(videoDuration);
+    }
+
+//    if (arg.getCustomData1() != null)
+//      customData.setCustomData1(arg.getCustomData1());
+//
+//    if (arg.getCustomData2() != null)
+//      customData.setCustomData2(arg.getCustomData2());
+
+//    customerData.setCustomerVideoData(videoData);
+//    customerData.setCustomerPlayerData(playerData);
+//    customerData.setCustomData(customData);
+
+    muxStatsMediaPlayer = new MuxStatsMediaPlayer(context, player, playerData.getPlayerName(), playerData, videoData);
   }
 
   private void onLoad(MethodCall call, Result result) {
@@ -349,6 +469,7 @@ public class AudiofileplayerPlugin
         result.success(null);
       } else if (call.argument(REMOTE_URL) != null) {
         String remoteUrl = call.argument(REMOTE_URL);
+        this.remoteUrl = remoteUrl;
         // Note that this will throw an exception on invalid URL or lack of network connectivity.
         RemoteManagedMediaPlayer newPlayer =
             new RemoteManagedMediaPlayer(audioId, remoteUrl, this, looping, playInBackground);
