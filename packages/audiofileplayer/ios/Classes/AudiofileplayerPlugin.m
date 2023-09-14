@@ -13,6 +13,7 @@ static NSString *const kAudioId = @"audioId";
 static NSString *const kLooping = @"looping";
 static NSString *const kReleaseMethod = @"release";
 static NSString *const kPlayMethod = @"play";
+static NSString *const kSetupMuxMethod = @"setupMux";
 static NSString *const kPlayFromStart = @"playFromStart";
 static NSString *const kEndpointSeconds = @"endpointSeconds";
 static NSString *const kSeekMethod = @"seek";
@@ -172,7 +173,10 @@ static NSString *const kMediaSkipIntervalSeconds = @"skipIntervalSeconds";
     return;
   }
 
-  if ([call.method isEqualToString:kPlayMethod]) {
+  if ([call.method isEqualToString:kSetupMuxMethod]) {
+      [player setupMux:call.arguments];
+      return;
+  } else if ([call.method isEqualToString:kPlayMethod]) {
     bool playFromStart = [call.arguments[kPlayFromStart] boolValue];
     NSNumber *endpointSecondsNumber = call.arguments[kEndpointSeconds];
     NSTimeInterval endpoint =

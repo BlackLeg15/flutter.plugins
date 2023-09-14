@@ -16,6 +16,7 @@ A Flutter plugin for audio playback.
   s.public_header_files = 'Classes/**/*.h'
   s.requires_arc = true
   s.dependency 'Flutter'
+  s.dependency 'Mux-Stats-AVPlayer', '~>3.0'
 
   s.platform = :ios, '10.0'
 end

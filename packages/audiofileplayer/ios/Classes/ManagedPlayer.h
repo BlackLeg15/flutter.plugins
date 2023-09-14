@@ -53,5 +53,6 @@ extern NSTimeInterval const FLTManagedPlayerPlayToEnd;
 - (void)seek:(NSTimeInterval)position completionHandler:(void (^)())completionHandler;
 - (void)setVolume:(double)volume;
 - (void)pause;
+- (void)setupMux:(NSDictionary *)muxConfig;
 
 @end

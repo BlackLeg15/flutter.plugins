@@ -1,6 +1,7 @@
 #import "ManagedPlayer.h"
 
 #import <AVFoundation/AVFoundation.h>
+@import MUXSDKStats;
 
 NSTimeInterval const FLTManagedPlayerPlayToEnd = -1.0;
 
@@ -12,10 +13,10 @@ static float const kTimerUpdateIntervalSeconds = 0.25;
 
 @implementation FLTManagedPlayer {
   __weak id<FLTManagedPlayerDelegate> _delegate;
-  AVAudioPlayer *_audioPlayer;
+  AVAudioPlayer *globalAudioPlayer;
   NSTimer *_positionTimer;
 
-  AVPlayer *_avPlayer;
+  AVPlayer *globalAvPlayer;
   id _completionObserver;            // Registered on NSNotificationCenter.
   id _timeObserver;                  // Registered on the AVPlayer.
   void (^_remoteLoadHandler)(BOOL);  // Called on AVPlayer loading status change observed.
@@ -39,11 +40,11 @@ static float const kTimerUpdateIntervalSeconds = 0.25;
     _audioId = [audioId copy];
     _delegate = delegate;
     if (audioPlayer) {
-      _audioPlayer = audioPlayer;
-      _audioPlayer.delegate = self;
-      _audioPlayer.numberOfLoops = isLooping ? -1 : 0;
-      [_audioPlayer prepareToPlay];
-      [_delegate managedPlayerDidLoadWithDuration:_audioPlayer.duration forAudioId:_audioId];
+      globalAudioPlayer = audioPlayer;
+      globalAudioPlayer.delegate = self;
+      globalAudioPlayer.numberOfLoops = isLooping ? -1 : 0;
+      [globalAudioPlayer prepareToPlay];
+      [_delegate managedPlayerDidLoadWithDuration:globalAudioPlayer.duration forAudioId:_audioId];
       __weak FLTManagedPlayer *weakSelf = self;
       _positionTimer = [NSTimer
           scheduledTimerWithTimeInterval:kTimerUpdateIntervalSeconds
@@ -51,19 +52,19 @@ static float const kTimerUpdateIntervalSeconds = 0.25;
                                    block:^(NSTimer *timer) {
                                      FLTManagedPlayer *strongSelf = weakSelf;
                                      if (strongSelf) {
-                                       if (strongSelf->_audioPlayer.playing) {
+                                       if (strongSelf->globalAudioPlayer.playing) {
                                          [strongSelf->_delegate
-                                             managedPlayerDidUpdatePosition:_audioPlayer.currentTime
+                                             managedPlayerDidUpdatePosition:globalAudioPlayer.currentTime
                                                                  forAudioId:strongSelf->_audioId];
                                        }
                                      }
                                    }];
     } else {
-      _avPlayer = avPlayer;
+      globalAvPlayer = avPlayer;
       _remoteLoadHandler = remoteLoadHandler;
       CMTime interval = CMTimeMakeWithSeconds(kTimerUpdateIntervalSeconds, NSEC_PER_SEC);
       __weak FLTManagedPlayer *weakSelf = self;
-      _timeObserver = [_avPlayer
+      _timeObserver = [globalAvPlayer
           addPeriodicTimeObserverForInterval:interval
                                        queue:nil
                                   usingBlock:^(CMTime time) {
@@ -78,16 +79,16 @@ static float const kTimerUpdateIntervalSeconds = 0.25;
                                   }];
       _completionObserver = [[NSNotificationCenter defaultCenter]
           addObserverForName:AVPlayerItemDidPlayToEndTimeNotification
-                      object:_avPlayer.currentItem
+                      object:globalAvPlayer.currentItem
                        queue:nil
                   usingBlock:^(NSNotification *notif) {
                     FLTManagedPlayer *strongSelf = weakSelf;
                     if (strongSelf) {
-                      [strongSelf->_avPlayer seekToTime:kCMTimeZero];
+                      [strongSelf->globalAvPlayer seekToTime:kCMTimeZero];
                       [strongSelf->_delegate managedPlayerDidFinishPlaying:_audioId];
                     }
                   }];
-      [_avPlayer.currentItem addObserver:self
+      [globalAvPlayer.currentItem addObserver:self
                               forKeyPath:kKeyPathStatus
                                  options:NSKeyValueObservingOptionNew
                                  context:nil];
@@ -140,19 +141,19 @@ static float const kTimerUpdateIntervalSeconds = 0.25;
 
 - (void)dealloc {
   [[NSNotificationCenter defaultCenter] removeObserver:_completionObserver];
-  [_avPlayer.currentItem removeObserver:self forKeyPath:kKeyPathStatus];
-  [_avPlayer removeTimeObserver:_timeObserver];
+  [globalAvPlayer.currentItem removeObserver:self forKeyPath:kKeyPathStatus];
+  [globalAvPlayer removeTimeObserver:_timeObserver];
 }
 
 - (void)play:(bool)playFromStart endpoint:(NSTimeInterval)endpoint {
   // Maybe seek to start.
-  if (_audioPlayer) {
+  if (globalAudioPlayer) {
     if (playFromStart) {
-      _audioPlayer.currentTime = 0;
+      globalAudioPlayer.currentTime = 0;
     }
   } else {
     if (playFromStart) {
-      [_avPlayer seekToTime:kCMTimeZero];
+      [globalAvPlayer seekToTime:kCMTimeZero];
     }
   }
   // Handle endpoint timers and start playback.
@@ -160,19 +161,19 @@ static float const kTimerUpdateIntervalSeconds = 0.25;
     // No endpoint, clear timer and start playback.
     [_endpointTimer invalidate];
     _endpointTimer = nil;
-    if (_audioPlayer) {
-      [_audioPlayer play];
+    if (globalAudioPlayer) {
+      [globalAudioPlayer play];
     } else {
-      [_avPlayer play];
+      [globalAvPlayer play];
     }
   } else {
     // If there is an endpoint, check that it is in the future, then start playback and schedule
     // the pausing after a duration.
     NSTimeInterval position;
-    if (_audioPlayer) {
-      position = _audioPlayer.currentTime;
+    if (globalAudioPlayer) {
+      position = globalAudioPlayer.currentTime;
     } else {
-      position = (NSTimeInterval)CMTimeGetSeconds(_avPlayer.currentTime);
+      position = (NSTimeInterval)CMTimeGetSeconds(globalAvPlayer.currentTime);
     }
     NSTimeInterval duration = endpoint - position;
     NSLog(@"Called play() at position %.2f seconds, to play for duration %.2f seconds.", position,
@@ -182,10 +183,10 @@ static float const kTimerUpdateIntervalSeconds = 0.25;
       return;
     }
     [_endpointTimer invalidate];
-    if (_audioPlayer) {
-      [_audioPlayer play];
+    if (globalAudioPlayer) {
+      [globalAudioPlayer play];
     } else {
-      [_avPlayer play];
+      [globalAvPlayer play];
     }
     __weak FLTManagedPlayer *weakSelf = self;
     _endpointTimer = [NSTimer
@@ -202,24 +203,24 @@ static float const kTimerUpdateIntervalSeconds = 0.25;
 }
 
 - (void)releasePlayer {
-  if (_audioPlayer) {
-    [_audioPlayer stop];  // Undoes the resource aquisition in [prepareToPlay].
+  if (globalAudioPlayer) {
+    [globalAudioPlayer stop];  // Undoes the resource aquisition in [prepareToPlay].
     [_positionTimer invalidate];
     _positionTimer = nil;
   } else {
-    [_avPlayer pause];
-    [_avPlayer.currentItem removeObserver:self forKeyPath:kKeyPathStatus];
-    [_avPlayer removeTimeObserver:_timeObserver];
-    _avPlayer = nil;
+    [globalAvPlayer pause];
+    [globalAvPlayer.currentItem removeObserver:self forKeyPath:kKeyPathStatus];
+    [globalAvPlayer removeTimeObserver:_timeObserver];
+    globalAvPlayer = nil;
   }
 }
 
 - (void)seek:(NSTimeInterval)position completionHandler:(void (^)())completionHandler {
-  if (_audioPlayer) {
-    _audioPlayer.currentTime = position;
+  if (globalAudioPlayer) {
+    globalAudioPlayer.currentTime = position;
     completionHandler();
   } else {
-    [_avPlayer seekToTime:CMTimeMakeWithSeconds(position, NSEC_PER_SEC)
+    [globalAvPlayer seekToTime:CMTimeMakeWithSeconds(position, NSEC_PER_SEC)
         completionHandler:^(BOOL completed) {
           completionHandler();
         }];
@@ -227,20 +228,61 @@ static float const kTimerUpdateIntervalSeconds = 0.25;
 }
 
 - (void)setVolume:(double)volume {
-  if (_audioPlayer) {
-    _audioPlayer.volume = volume;
+  if (globalAudioPlayer) {
+    globalAudioPlayer.volume = volume;
   } else {
-    _avPlayer.volume = volume;
+    globalAvPlayer.volume = volume;
   }
 }
 
 - (void)pause {
-  if (_audioPlayer) {
-    [_audioPlayer pause];
+  if (globalAudioPlayer) {
+    [globalAudioPlayer pause];
   } else {
-    [_avPlayer pause];
+    [globalAvPlayer pause];
   }
 }
+
+- (void)setupMux:(NSDictionary *)muxConfig{
+    AVPlayerViewController* playerViewController = [AVPlayerViewController new];
+    playerViewController.player = globalAvPlayer;
+
+    // Environment and player data that persists until the player is destroyed
+      MUXSDKCustomerPlayerData* playerData = [[MUXSDKCustomerPlayerData alloc] initWithEnvironmentKey:muxConfig[@"envKey"]];
+      playerData.playerName = muxConfig[@"playerName"];
+      playerData.viewerUserId = muxConfig[@"viewerUserId"];
+      playerData.experimentName = muxConfig[@"experimentName"];
+      playerData.playerVersion = muxConfig[@"playerVersion"];
+      playerData.pageType = muxConfig[@"pageType"];
+      playerData.subPropertyId = muxConfig[@"subPropertyId"];
+      playerData.playerInitTime = muxConfig[@"playerInitTime"];
+
+      // Video metadata (cleared with videoChangeForPlayer:withVideoData:)
+      MUXSDKCustomerVideoData* videoData = [MUXSDKCustomerVideoData new];
+      videoData.videoId = muxConfig[@"videoId"];
+      videoData.videoTitle = muxConfig[@"videoTitle"];
+      videoData.videoSeries = muxConfig[@"videoSeries"];
+      videoData.videoVariantName = muxConfig[@"videoVariantName"];
+      videoData.videoVariantId = muxConfig[@"videoVariantId"];
+      videoData.videoLanguageCode = muxConfig[@"videoLanguageCode"];
+      videoData.videoContentType = muxConfig[@"videoContentType"];
+      videoData.videoStreamType = muxConfig[@"videoStreamType"];
+      videoData.videoProducer = muxConfig[@"videoProducer"];
+      videoData.videoEncodingVariant = muxConfig[@"videoEncodingVariant"];
+      videoData.videoCdn = muxConfig[@"videoCdn"];
+      videoData.videoDuration = muxConfig[@"videoDuration"];
+      
+      MUXSDKCustomData *customData = [[MUXSDKCustomData alloc] init];
+      [customData setCustomData1:muxConfig[@"customData1"]];
+      [customData setCustomData2:muxConfig[@"customData2"]];
+
+      MUXSDKCustomerData *customerData = [[MUXSDKCustomerData alloc] initWithCustomerPlayerData:playerData videoData:videoData viewData:nil customData:customData viewerData:nil];
+          
+      [MUXSDKStats monitorAVPlayerViewController:playerViewController
+                                  withPlayerName:muxConfig[@"playerName"]
+                                      customerData:customerData];
+}
+
 
 #pragma mark - KVO
 
@@ -280,7 +322,7 @@ static float const kTimerUpdateIntervalSeconds = 0.25;
 #pragma mark - AVAudioPlayerDelegate
 
 - (void)audioPlayerDidFinishPlaying:(AVAudioPlayer *)audioPlayer successfully:(BOOL)flag {
-  _audioPlayer.currentTime = 0;
+  globalAudioPlayer.currentTime = 0;
   [_delegate managedPlayerDidFinishPlaying:_audioId];
 }
 
