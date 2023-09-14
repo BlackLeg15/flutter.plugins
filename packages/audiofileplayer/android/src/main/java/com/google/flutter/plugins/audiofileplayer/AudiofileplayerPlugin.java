@@ -66,6 +66,8 @@ public class AudiofileplayerPlugin
   private static final String PLAY_IN_BACKGROUND = "playInBackground";
   private static final String RELEASE_METHOD = "release";
   private static final String PLAY_METHOD = "play";
+  private static final String SETUP_MUX_METHOD = "setupMux";
+  private static final String MUX_CONFIG = "muxConfig";
   private static final String PLAY_FROM_START = "playFromStart";
   private static final String ENDPOINT_SECONDS = "endpointSeconds";
   private static final String SEEK_METHOD = "seek";
@@ -244,8 +246,11 @@ public class AudiofileplayerPlugin
 
     // All subsequent calls need a valid player.
     ManagedMediaPlayer player = getAndVerifyPlayer(call, result);
-
-    if (call.method.equals(PLAY_METHOD)) {
+    if(call.method.equals(SETUP_MUX_METHOD)){
+      Map<String, Object> args = call.argument(MUX_CONFIG);
+      player.setupMux(args);
+    }
+    else if (call.method.equals(PLAY_METHOD)) {
       Boolean playFromStartBoolean = call.argument(PLAY_FROM_START);
       boolean playFromStart = playFromStartBoolean.booleanValue();
       Double endpointSecondsDouble = call.argument(ENDPOINT_SECONDS);

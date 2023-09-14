@@ -68,5 +68,5 @@ android {
 dependencies {
     implementation 'androidx.core:core:1.12.0'
     implementation 'androidx.media:media:1.6.0'
-    implementation files('libs/mux.aar')
+    implementation files('libs/MuxMediaPlayer.aar')
 }
