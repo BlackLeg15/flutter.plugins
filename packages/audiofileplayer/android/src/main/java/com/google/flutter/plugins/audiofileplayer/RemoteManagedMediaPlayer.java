@@ -23,7 +23,7 @@ import java.util.List;
  * internally upon loading completion.
  *
  * <p>Note that with async loading, errors such as invalid URLs and lack of connectivity are
- * reported asyncly via {@link RemoteManagedMediaPlayer.onError()}, instead of as Exceptions.
+ * reported asyncly via {@link RemoteManagedMediaPlayer}, instead of as Exceptions.
  * Unfortunately, this yields inscrutable and/or undifferentiated error codes, instead of discrete
  * Exception subclasses with human-readable error messages.
  */

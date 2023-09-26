@@ -504,7 +504,7 @@ class Audio with WidgetsBindingObserver {
       return;
     }
     try {
-      final args = muxConfig.toMap();
+      final args = muxConfig.toMap()..addAll({audioIdKey: _audioId});
       await _sendMethodCall(_audioId, setupMuxMethod, args);
     } on PlatformException catch (e) {
       if (_usingOnErrorAudios.containsKey(_audioId)) {
