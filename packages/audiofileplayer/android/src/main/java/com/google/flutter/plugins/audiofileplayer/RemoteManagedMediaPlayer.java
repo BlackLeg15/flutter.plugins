@@ -61,7 +61,7 @@ class RemoteManagedMediaPlayer extends ManagedMediaPlayer{
     @Override
     public void onPlaybackStateChanged(int playbackState) {
         super.onPlaybackStateChanged(playbackState);
-        if(playbackState == Player.STATE_READY){
+        if(playbackState == Player.STATE_READY && !isPrepared){
             Log.i(TAG, "on prepared");
             isPrepared = true;
             onRemoteLoadListener.onRemoteLoadComplete(true);

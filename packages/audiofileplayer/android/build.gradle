@@ -78,7 +78,3 @@ dependencies {
     implementation 'com.google.android.exoplayer:exoplayer-smoothstreaming:2.18.1'
     //implementation files('libs/MuxMediaPlayer.aar')
 }
-
-repositories {
-    google()
-}
