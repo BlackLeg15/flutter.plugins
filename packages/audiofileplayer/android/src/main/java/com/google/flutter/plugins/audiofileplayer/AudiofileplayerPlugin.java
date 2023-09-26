@@ -11,9 +11,7 @@ import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.media.AudioManager;
-import android.media.MediaPlayer;
 import android.os.Bundle;
-import android.os.RemoteException;
 import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.MediaMetadataCompat;
 import android.support.v4.media.session.MediaControllerCompat;
@@ -186,7 +184,7 @@ public class AudiofileplayerPlugin
   }
 
   @Override
-  public void onAttachedToActivity(ActivityPluginBinding activityPluginBinding) {
+  public void onAttachedToActivity(@NonNull ActivityPluginBinding activityPluginBinding) {
     attachToActivity(activityPluginBinding);
   }
 
@@ -196,7 +194,7 @@ public class AudiofileplayerPlugin
   }
 
   @Override
-  public void onReattachedToActivityForConfigChanges(ActivityPluginBinding activityPluginBinding) {
+  public void onReattachedToActivityForConfigChanges(@NonNull ActivityPluginBinding activityPluginBinding) {
     attachToActivity(activityPluginBinding);
   }
 
@@ -206,7 +204,7 @@ public class AudiofileplayerPlugin
   }
 
   @Override
-  public void onMethodCall(MethodCall call, Result result) {
+  public void onMethodCall(MethodCall call, @NonNull Result result) {
     Log.i(TAG, "onMethodCall: method = " + call.method);
     if (call.method.equals(LOAD_METHOD)) {
       onLoad(call, result);
@@ -345,10 +343,12 @@ public class AudiofileplayerPlugin
 //    if (playerVersion != null)
 //      playerData.setPlayerVersion(playerVersion);
 
-    Long playerInitTime = (Long) arg.get("playerInitTime");
-
-    if (playerInitTime != null)
+    try {
+      Long playerInitTime = Long.valueOf("playerInitTime");
       playerData.setPlayerInitTime(playerInitTime);
+    } catch (Exception e) {
+      io.flutter.Log.d("Error", "playerInitTime bug");
+    }
 
     String videoId = (String) arg.get("videoId");
 
@@ -399,10 +399,11 @@ public class AudiofileplayerPlugin
     if (videoCdn != null)
       videoData.setVideoCdn(videoCdn);
 
-    Long videoDuration = (Long) arg.get("videoDuration");
-
-    if (videoDuration != null) {
+    try {
+      Long videoDuration = Long.valueOf("videoDuration");
       videoData.setVideoDuration(videoDuration);
+    } catch (Exception e) {
+      io.flutter.Log.d("Error", "videoDuration bug");
     }
 
     String customData1 = (String) arg.get("customData1");
