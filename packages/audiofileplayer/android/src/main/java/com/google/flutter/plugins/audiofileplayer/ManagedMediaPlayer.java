@@ -1,16 +1,19 @@
 package com.google.flutter.plugins.audiofileplayer;
 
+import android.content.Context;
 import android.media.MediaPlayer;
 import android.os.Handler;
 import android.util.Log;
 
+import com.google.android.exoplayer2.ExoPlayer;
+import com.google.android.exoplayer2.PlaybackException;
+import com.google.android.exoplayer2.Player;
+import com.google.android.exoplayer2.audio.AudioAttributes;
+
 import java.lang.ref.WeakReference;
 
 /** Base class for wrapping a MediaPlayer for use by AudiofileplayerPlugin. */
-abstract class ManagedMediaPlayer
-    implements MediaPlayer.OnCompletionListener,
-        MediaPlayer.OnErrorListener,
-        MediaPlayer.OnSeekCompleteListener {
+abstract class ManagedMediaPlayer implements Player.Listener {
   private static final String TAG = ManagedMediaPlayer.class.getSimpleName();
   public static final int PLAY_TO_END = -1;
 
@@ -22,7 +25,7 @@ abstract class ManagedMediaPlayer
   protected final AudiofileplayerPlugin parentAudioPlugin;
   protected final String audioId;
   protected final boolean playInBackground;
-  protected final MediaPlayer player;
+  protected final ExoPlayer player;
   final Handler handler;
   final Runnable pauseAtEndpointRunnable;
   private OnSeekCompleteListener onSeekCompleteListener;
@@ -48,12 +51,13 @@ abstract class ManagedMediaPlayer
       String audioId,
       AudiofileplayerPlugin parentAudioPlugin,
       boolean looping,
-      boolean playInBackground) {
+      boolean playInBackground, Context context) {
     this.parentAudioPlugin = parentAudioPlugin;
     this.audioId = audioId;
     this.playInBackground = playInBackground;
-    player = new MediaPlayer();
-    player.setLooping(looping);
+    player = new ExoPlayer.Builder(context).build();
+    //player.setLooping(looping);
+    player.addListener(this);
 
     pauseAtEndpointRunnable = new PauseAtEndpointRunnable(this);
 
@@ -85,19 +89,19 @@ abstract class ManagedMediaPlayer
     }
     if (endpointMs == PLAY_TO_END) {
       handler.removeCallbacks(pauseAtEndpointRunnable);
-      player.start();
+      player.play();
     } else {
       // If there is an endpoint, check that it is in the future, then start playback and schedule
       // the pausing after a duration.
-      int positionMs = player.getCurrentPosition();
-      int durationMs = endpointMs - positionMs;
+      long positionMs = player.getCurrentPosition();
+      long durationMs = endpointMs - positionMs;
       Log.i(TAG, "Called play() at " + positionMs + " ms, to play for " + durationMs + " ms.");
       if (durationMs <= 0) {
         Log.w(TAG, "Called play() at position after endpoint. No playback occurred.");
         return;
       }
       handler.removeCallbacks(pauseAtEndpointRunnable);
-      player.start();
+      player.play();
       handler.postDelayed(pauseAtEndpointRunnable, durationMs);
     }
   }
@@ -105,12 +109,14 @@ abstract class ManagedMediaPlayer
   /** Releases the underlying MediaPlayer. */
   public void release() {
     player.stop();
-    player.reset();
+    //player.reset();
     player.release();
-    player.setOnErrorListener(null);
-    player.setOnCompletionListener(null);
-    player.setOnPreparedListener(null);
-    player.setOnSeekCompleteListener(null);
+    /*
+    * player.setOnErrorListener(null);
+    * player.setOnCompletionListener(null);
+    * player.setOnPreparedListener(null);
+    * player.setOnSeekCompleteListener(null);
+    * */
     handler.removeCallbacksAndMessages(null);
   }
 
@@ -120,7 +126,7 @@ abstract class ManagedMediaPlayer
   }
 
   public void setVolume(double volume) {
-    player.setVolume((float) volume, (float) volume);
+    player.setVolume((float) volume);
   }
 
   public void pause() {
@@ -128,27 +134,27 @@ abstract class ManagedMediaPlayer
   }
 
   @Override
-  public void onCompletion(MediaPlayer mediaPlayer) {
-    player.seekTo(0);
-    parentAudioPlugin.handleCompletion(this.audioId);
-  }
-
-  /**
-   * Callback to indicate an error condition.
-   *
-   * <p>NOTE: {@link #onError(MediaPlayer, int, int)} must be properly implemented and return {@code
-   * true} otherwise errors will repeatedly call {@link #onCompletion(MediaPlayer)}.
-   */
-  @Override
-  public boolean onError(MediaPlayer mp, int what, int extra) {
-    Log.e(TAG, "onError: what:" + what + " extra: " + extra);
-    return true;
+  public void onPlaybackStateChanged(int playbackState) {
+    Player.Listener.super.onPlaybackStateChanged(playbackState);
+    if(playbackState == Player.STATE_ENDED){
+      player.seekTo(0);
+      parentAudioPlugin.handleCompletion(this.audioId);
+    }
   }
 
   @Override
-  public void onSeekComplete(MediaPlayer mp) {
-    if (onSeekCompleteListener != null) {
-      onSeekCompleteListener.onSeekComplete();
+  public void onPlayerError(PlaybackException error) {
+    Player.Listener.super.onPlayerError(error);
+    Log.e(TAG, "onError:" + error.errorCode);
+  }
+
+  @Override
+  public void onPositionDiscontinuity(Player.PositionInfo oldPosition, Player.PositionInfo newPosition, int reason) {
+    Player.Listener.super.onPositionDiscontinuity(oldPosition, newPosition, reason);
+    if(reason == Player.DISCONTINUITY_REASON_SEEK){
+      if (onSeekCompleteListener != null) {
+        onSeekCompleteListener.onSeekComplete();
+      }
     }
   }
 

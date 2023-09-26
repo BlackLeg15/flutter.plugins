@@ -1,7 +1,15 @@
 package com.google.flutter.plugins.audiofileplayer;
 
+import android.content.Context;
 import android.media.MediaPlayer;
 import android.util.Log;
+
+import com.google.android.exoplayer2.MediaItem;
+import com.google.android.exoplayer2.PlaybackException;
+import com.google.android.exoplayer2.Player;
+import com.google.android.exoplayer2.source.ProgressiveMediaSource;
+import com.google.android.exoplayer2.upstream.DefaultHttpDataSource;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,101 +27,89 @@ import java.util.List;
  * Unfortunately, this yields inscrutable and/or undifferentiated error codes, instead of discrete
  * Exception subclasses with human-readable error messages.
  */
-class RemoteManagedMediaPlayer extends ManagedMediaPlayer
-    implements MediaPlayer.OnPreparedListener {
+class RemoteManagedMediaPlayer extends ManagedMediaPlayer{
 
-  interface OnRemoteLoadListener {
-    /**
-     * Called when asynchronous remote loading has completed, either successfully via {@link
-     * RemoteManagedMediaPlayer#onPrepare()}, or unsuccessfully on {@link
-     * RemoteManagedMediaPlayer#onError()}.
-     */
-    void onRemoteLoadComplete(boolean success);
-  }
-
-  private static final String TAG = RemoteManagedMediaPlayer.class.getSimpleName();
-  private OnRemoteLoadListener onRemoteLoadListener;
-  private boolean isPrepared;
-  // A list of runnables to run once onPrepared() is called.
-  private List<Runnable> onPreparedRunnables = new ArrayList<>();
-
-  /**
-   * Create a RemoteManagedMediaPlayer from an remote URL string.
-   *
-   * <p>Async loading errors (during {@link MediaPlayer#prepareAsync()}) are caught by {@link
-   * RemoteManagedMediaPlayer#onError()}, not as Exceptions.
-   *
-   * @throws IOException if underlying MediaPlayer cannot load it as its DataSource.
-   */
-  public RemoteManagedMediaPlayer(
-      String audioId,
-      String remoteUrl,
-      AudiofileplayerPlugin parentAudioPlugin,
-      boolean looping,
-      boolean playInBackground)
-      throws IOException {
-    super(audioId, parentAudioPlugin, looping, playInBackground);
-    player.setDataSource(remoteUrl);
-    player.setOnCompletionListener(this);
-    player.setOnPreparedListener(this);
-    player.setOnErrorListener(this);
-    player.setOnSeekCompleteListener(this);
-    player.prepareAsync();
-  }
-
-  public void setOnRemoteLoadListener(OnRemoteLoadListener onRemoteLoadListener) {
-    this.onRemoteLoadListener = onRemoteLoadListener;
-  }
-
-  @Override
-  public void onPrepared(MediaPlayer mediaPlayer) {
-    Log.i(TAG, "on prepared");
-    isPrepared = true;
-    onRemoteLoadListener.onRemoteLoadComplete(true);
-    for (Runnable r : onPreparedRunnables) {
-      r.run();
+    interface OnRemoteLoadListener {
+        void onRemoteLoadComplete(boolean success);
     }
-  }
 
-  @Override
-  public void play(boolean playFromStart, int endpointMs) {
-    if (!isPrepared) {
-      onPreparedRunnables.add(() -> RemoteManagedMediaPlayer.super.play(playFromStart, endpointMs));
-    } else {
-      super.play(playFromStart, endpointMs);
+    private static final String TAG = RemoteManagedMediaPlayer.class.getSimpleName();
+    private OnRemoteLoadListener onRemoteLoadListener;
+    private boolean isPrepared;
+    private List<Runnable> onPreparedRunnables = new ArrayList<>();
+
+
+    public RemoteManagedMediaPlayer(
+            String audioId,
+            String remoteUrl,
+            AudiofileplayerPlugin parentAudioPlugin,
+            boolean looping,
+            boolean playInBackground, Context context)
+            throws IOException {
+        super(audioId, parentAudioPlugin, looping, playInBackground, context);
+        player.addMediaSource(new ProgressiveMediaSource.Factory(new DefaultHttpDataSource.Factory()
+                .setUserAgent("ExoPlayer")
+                .setAllowCrossProtocolRedirects(true))
+                .createMediaSource(MediaItem.fromUri(remoteUrl)));
+        player.prepare();
     }
-  }
 
-  @Override
-  public void release() {
-    if (!isPrepared) {
-      onPreparedRunnables.add(() -> RemoteManagedMediaPlayer.super.release());
-    } else {
-      super.release();
+    public void setOnRemoteLoadListener(OnRemoteLoadListener onRemoteLoadListener) {
+        this.onRemoteLoadListener = onRemoteLoadListener;
     }
-  }
 
-  @Override
-  public void seek(double positionSeconds) {
-    if (!isPrepared) {
-      onPreparedRunnables.add(() -> RemoteManagedMediaPlayer.super.seek(positionSeconds));
-    } else {
-      super.seek(positionSeconds);
+    @Override
+    public void onPlaybackStateChanged(int playbackState) {
+        super.onPlaybackStateChanged(playbackState);
+        if(playbackState == Player.STATE_READY){
+            Log.i(TAG, "on prepared");
+            isPrepared = true;
+            onRemoteLoadListener.onRemoteLoadComplete(true);
+            for (Runnable r : onPreparedRunnables) {
+                r.run();
+            }
+        }
     }
-  }
 
-  @Override
-  public void pause() {
-    if (!isPrepared) {
-      onPreparedRunnables.add(() -> RemoteManagedMediaPlayer.super.pause());
-    } else {
-      super.pause();
+    @Override
+    public void play(boolean playFromStart, int endpointMs) {
+        if (!isPrepared) {
+            onPreparedRunnables.add(() -> RemoteManagedMediaPlayer.super.play(playFromStart, endpointMs));
+        } else {
+            super.play(playFromStart, endpointMs);
+        }
     }
-  }
 
-  @Override
-  public boolean onError(MediaPlayer mp, int what, int extra) {
-    onRemoteLoadListener.onRemoteLoadComplete(false);
-    return super.onError(mp, what, extra);
-  }
+    @Override
+    public void release() {
+        if (!isPrepared) {
+            onPreparedRunnables.add(RemoteManagedMediaPlayer.super::release);
+        } else {
+            super.release();
+        }
+    }
+
+    @Override
+    public void seek(double positionSeconds) {
+        if (!isPrepared) {
+            onPreparedRunnables.add(() -> RemoteManagedMediaPlayer.super.seek(positionSeconds));
+        } else {
+            super.seek(positionSeconds);
+        }
+    }
+
+    @Override
+    public void pause() {
+        if (!isPrepared) {
+            onPreparedRunnables.add(RemoteManagedMediaPlayer.super::pause);
+        } else {
+            super.pause();
+        }
+    }
+
+    @Override
+    public void onPlayerError(PlaybackException error) {
+        super.onPlayerError(error);
+        onRemoteLoadListener.onRemoteLoadComplete(false);
+    }
 }

@@ -18,6 +18,9 @@ rootProject.allprojects {
     repositories {
         google()
         mavenCentral()
+        maven {
+            url "https://muxinc.jfrog.io/artifactory/default-maven-release-local"
+        }
     }
 }
 
@@ -30,7 +33,7 @@ android {
     }
 
     compileSdk 34
-	
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
@@ -58,7 +61,7 @@ android {
 
             testLogging {
                 events "passed", "skipped", "failed", "standardOut", "standardError"
-                outputs.upToDateWhen {false}
+                outputs.upToDateWhen { false }
                 showStandardStreams = true
             }
         }
@@ -66,7 +69,12 @@ android {
 }
 
 dependencies {
-    implementation 'androidx.core:core:1.12.0'
+    implementation 'androidx.core:core-ktx:1.12.0'
     implementation 'androidx.media:media:1.6.0'
-    implementation files('libs/MuxMediaPlayer.aar')
+    api 'com.mux.stats.sdk.muxstats:MuxExoPlayer_r2_18_1:2.9.1'
+    implementation 'com.google.android.exoplayer:exoplayer-core:2.18.1'
+    implementation 'com.google.android.exoplayer:exoplayer-hls:2.18.1'
+    implementation 'com.google.android.exoplayer:exoplayer-dash:2.18.1'
+    implementation 'com.google.android.exoplayer:exoplayer-smoothstreaming:2.18.1'
+    //implementation files('libs/MuxMediaPlayer.aar')
 }

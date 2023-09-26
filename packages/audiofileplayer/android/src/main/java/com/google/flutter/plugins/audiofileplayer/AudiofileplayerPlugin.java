@@ -25,9 +25,12 @@ import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
 import androidx.media.session.MediaButtonReceiver;
 
+import com.google.android.exoplayer2.ExoPlayer;
+import com.mux.stats.sdk.core.model.CustomData;
+import com.mux.stats.sdk.core.model.CustomerData;
 import com.mux.stats.sdk.core.model.CustomerPlayerData;
 import com.mux.stats.sdk.core.model.CustomerVideoData;
-import com.mux.stats.sdk.muxstats.mediaplayer.MuxStatsMediaPlayer;
+import com.mux.stats.sdk.muxstats.MuxStatsExoPlayer;
 
 import io.flutter.FlutterInjector;
 import io.flutter.embedding.engine.loader.FlutterLoader;
@@ -136,7 +139,7 @@ public class AudiofileplayerPlugin
   private MediaBrowserCompat mediaBrowser;
   private MediaControllerCompat mediaController;
   private String remoteUrl = "";
-  private MuxStatsMediaPlayer muxStatsMediaPlayer;
+  private MuxStatsExoPlayer muxStatsExoPlayer;
 
   private void registerLifecycleCallbacks(Activity activity) {
     LifecycleCallbacks callbacks = new LifecycleCallbacks(this, activity.hashCode());
@@ -170,7 +173,7 @@ public class AudiofileplayerPlugin
     mediaPlayers.clear();
     mediaPlayers = null;
     context = null;
-    muxStatsMediaPlayer.release();
+    muxStatsExoPlayer.release();
   }
 
   private void attachToActivity(ActivityPluginBinding activityPluginBinding) {
@@ -279,7 +282,7 @@ public class AudiofileplayerPlugin
       }
       result.success(null);
     } else if (call.method.equals(RELEASE_METHOD)) {
-      muxStatsMediaPlayer.release();
+      muxStatsExoPlayer.release();
       player.release();
       mediaPlayers.remove(player.getAudioId());
       result.success(null);
@@ -306,12 +309,12 @@ public class AudiofileplayerPlugin
     }
   }
 
-  public void setupMux(Map<String, Object> arg, MediaPlayer player) {
+  public void setupMux(Map<String, Object> arg, ExoPlayer player) {
     CustomerPlayerData playerData = new CustomerPlayerData();
     CustomerVideoData videoData = new CustomerVideoData();
-//    CustomData customData = new CustomData();
+    CustomData customData = new CustomData();
 
-//    CustomerData customerData = new CustomerData();
+    CustomerData customerData = new CustomerData();
 
     playerData.setEnvironmentKey((String) arg.get("envKey"));
     playerData.setPlayerName((String) arg.get("playerName"));
@@ -402,17 +405,24 @@ public class AudiofileplayerPlugin
       videoData.setVideoDuration(videoDuration);
     }
 
-//    if (arg.getCustomData1() != null)
-//      customData.setCustomData1(arg.getCustomData1());
-//
-//    if (arg.getCustomData2() != null)
-//      customData.setCustomData2(arg.getCustomData2());
+    String customData1 = (String) arg.get("customData1");
 
-//    customerData.setCustomerVideoData(videoData);
-//    customerData.setCustomerPlayerData(playerData);
-//    customerData.setCustomData(customData);
+    if (customData1 != null){
+      customData.setCustomData1(customData1);
+    }
 
-    muxStatsMediaPlayer = new MuxStatsMediaPlayer(context, player, playerData.getPlayerName(), playerData, videoData);
+    String customData2 = (String) arg.get("customData2");
+
+    if (customData2 != null){
+      customData.setCustomData2(customData2);
+    }
+
+    customerData.setCustomerVideoData(videoData);
+    customerData.setCustomerPlayerData(playerData);
+    customerData.setCustomData(customData);
+
+    muxStatsExoPlayer = new MuxStatsExoPlayer(context, player,
+            playerData.getPlayerName(), customerData);
   }
 
   private void onLoad(MethodCall call, Result result) {
@@ -447,7 +457,7 @@ public class AudiofileplayerPlugin
         String key = flutterLoader.getLookupKeyForAsset(flutterPath);
         AssetFileDescriptor fd = assetManager.openFd(key);
         ManagedMediaPlayer newPlayer =
-            new LocalManagedMediaPlayer(audioId, fd, this, looping, playInBackground);
+            new LocalManagedMediaPlayer(audioId, fd, this, looping, playInBackground, context);
         fd.close();
         mediaPlayers.put(audioId, newPlayer);
         handleDurationForPlayer(newPlayer, audioId);
@@ -455,7 +465,7 @@ public class AudiofileplayerPlugin
       } else if (call.argument(ABSOLUTE_PATH) != null) {
         String absolutePath = call.argument(ABSOLUTE_PATH);
         ManagedMediaPlayer newPlayer =
-            new LocalManagedMediaPlayer(audioId, absolutePath, this, looping, playInBackground);
+            new LocalManagedMediaPlayer(audioId, absolutePath, this, looping, playInBackground, context);
         mediaPlayers.put(audioId, newPlayer);
         handleDurationForPlayer(newPlayer, audioId);
         result.success(null);
@@ -472,7 +482,7 @@ public class AudiofileplayerPlugin
         this.remoteUrl = remoteUrl;
         // Note that this will throw an exception on invalid URL or lack of network connectivity.
         RemoteManagedMediaPlayer newPlayer =
-            new RemoteManagedMediaPlayer(audioId, remoteUrl, this, looping, playInBackground);
+            new RemoteManagedMediaPlayer(audioId, remoteUrl, this, looping, playInBackground, context);
         newPlayer.setOnRemoteLoadListener(
             (success) -> {
               if (success) {
