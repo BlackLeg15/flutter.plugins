@@ -65,11 +65,11 @@ class RemoteManagedMediaPlayer extends ManagedMediaPlayer {
                 new DefaultHttpDataSource.Factory()
                         .setUserAgent("ExoPlayer")
                         .setAllowCrossProtocolRedirects(true);
-//        String formatHint = "other";
-//        if(remoteUrl.startsWith("hls")){
-//            formatHint = FORMAT_HLS;
-//        }
-        player.addMediaSource(buildMediaSource(Uri.parse(remoteUrl), httpDataSourceFactory, null, context));
+        String formatHint = FORMAT_OTHER;
+        if(remoteUrl.contains("hls")){
+            formatHint = FORMAT_HLS;
+        }
+        player.addMediaSource(buildMediaSource(Uri.parse(remoteUrl), httpDataSourceFactory, formatHint, context));
         player.prepare();
     }
 
