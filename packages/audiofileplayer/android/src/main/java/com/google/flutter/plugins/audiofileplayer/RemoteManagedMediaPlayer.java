@@ -1,14 +1,24 @@
 package com.google.flutter.plugins.audiofileplayer;
 
 import android.content.Context;
-import android.media.MediaPlayer;
+import android.net.Uri;
 import android.util.Log;
 
+import com.google.android.exoplayer2.C;
 import com.google.android.exoplayer2.MediaItem;
 import com.google.android.exoplayer2.PlaybackException;
 import com.google.android.exoplayer2.Player;
+import com.google.android.exoplayer2.source.MediaSource;
 import com.google.android.exoplayer2.source.ProgressiveMediaSource;
+import com.google.android.exoplayer2.source.dash.DashMediaSource;
+import com.google.android.exoplayer2.source.dash.DefaultDashChunkSource;
+import com.google.android.exoplayer2.source.hls.HlsMediaSource;
+import com.google.android.exoplayer2.source.smoothstreaming.DefaultSsChunkSource;
+import com.google.android.exoplayer2.source.smoothstreaming.SsMediaSource;
+import com.google.android.exoplayer2.upstream.DataSource;
+import com.google.android.exoplayer2.upstream.DefaultDataSource;
 import com.google.android.exoplayer2.upstream.DefaultHttpDataSource;
+import com.google.android.exoplayer2.util.Util;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -27,7 +37,11 @@ import java.util.List;
  * Unfortunately, this yields inscrutable and/or undifferentiated error codes, instead of discrete
  * Exception subclasses with human-readable error messages.
  */
-class RemoteManagedMediaPlayer extends ManagedMediaPlayer{
+class RemoteManagedMediaPlayer extends ManagedMediaPlayer {
+    private static final String FORMAT_SS = "ss";
+    private static final String FORMAT_DASH = "dash";
+    private static final String FORMAT_HLS = "hls";
+    private static final String FORMAT_OTHER = "other";
 
     interface OnRemoteLoadListener {
         void onRemoteLoadComplete(boolean success);
@@ -47,11 +61,63 @@ class RemoteManagedMediaPlayer extends ManagedMediaPlayer{
             boolean playInBackground, Context context)
             throws IOException {
         super(audioId, parentAudioPlugin, looping, playInBackground, context);
-        player.addMediaSource(new ProgressiveMediaSource.Factory(new DefaultHttpDataSource.Factory()
-                .setUserAgent("ExoPlayer")
-                .setAllowCrossProtocolRedirects(true))
-                .createMediaSource(MediaItem.fromUri(remoteUrl)));
+        final DefaultHttpDataSource.Factory httpDataSourceFactory =
+                new DefaultHttpDataSource.Factory()
+                        .setUserAgent("ExoPlayer")
+                        .setAllowCrossProtocolRedirects(true);
+//        String formatHint = "other";
+//        if(remoteUrl.startsWith("hls")){
+//            formatHint = FORMAT_HLS;
+//        }
+        player.addMediaSource(buildMediaSource(Uri.parse(remoteUrl), httpDataSourceFactory, null, context));
         player.prepare();
+    }
+
+    private MediaSource buildMediaSource(
+            Uri uri, DataSource.Factory mediaDataSourceFactory, String formatHint, Context context) {
+        int type;
+        if (formatHint == null) {
+            type = Util.inferContentType(uri);
+        } else {
+            switch (formatHint) {
+                case FORMAT_SS:
+                    type = C.CONTENT_TYPE_SS;
+                    break;
+                case FORMAT_DASH:
+                    type = C.CONTENT_TYPE_DASH;
+                    break;
+                case FORMAT_HLS:
+                    type = C.CONTENT_TYPE_HLS;
+                    break;
+                case FORMAT_OTHER:
+                    type = C.CONTENT_TYPE_OTHER;
+                    break;
+                default:
+                    type = -1;
+                    break;
+            }
+        }
+        switch (type) {
+            case C.CONTENT_TYPE_SS:
+                return new SsMediaSource.Factory(
+                        new DefaultSsChunkSource.Factory(mediaDataSourceFactory),
+                        new DefaultDataSource.Factory(context, mediaDataSourceFactory))
+                        .createMediaSource(MediaItem.fromUri(uri));
+            case C.CONTENT_TYPE_DASH:
+                return new DashMediaSource.Factory(
+                        new DefaultDashChunkSource.Factory(mediaDataSourceFactory),
+                        new DefaultDataSource.Factory(context, mediaDataSourceFactory))
+                        .createMediaSource(MediaItem.fromUri(uri));
+            case C.CONTENT_TYPE_HLS:
+                return new HlsMediaSource.Factory(mediaDataSourceFactory)
+                        .createMediaSource(MediaItem.fromUri(uri));
+            case C.CONTENT_TYPE_OTHER:
+                return new ProgressiveMediaSource.Factory(mediaDataSourceFactory)
+                        .createMediaSource(MediaItem.fromUri(uri));
+            default: {
+                throw new IllegalStateException("Unsupported type: " + type);
+            }
+        }
     }
 
     public void setOnRemoteLoadListener(OnRemoteLoadListener onRemoteLoadListener) {
@@ -61,7 +127,7 @@ class RemoteManagedMediaPlayer extends ManagedMediaPlayer{
     @Override
     public void onPlaybackStateChanged(int playbackState) {
         super.onPlaybackStateChanged(playbackState);
-        if(playbackState == Player.STATE_READY && !isPrepared){
+        if (playbackState == Player.STATE_READY && !isPrepared) {
             Log.i(TAG, "on prepared");
             isPrepared = true;
             onRemoteLoadListener.onRemoteLoadComplete(true);
