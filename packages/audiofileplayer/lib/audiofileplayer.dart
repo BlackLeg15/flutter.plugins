@@ -698,9 +698,18 @@ class Audio with WidgetsBindingObserver {
 
     // If audio is in [_awaitingOnCompleteAudios], remove it and call its
     // _onComplete();
-    _awaitingOnCompleteAudios.remove(audioId)?._onComplete!();
+    if (_awaitingOnCompleteAudios.containsKey(audioId)) {
+      _awaitingOnCompleteAudios.remove(audioId)?._onComplete?.call();
+    }
     // If audio is in [_usingOnPositionAudios], remove it.
-    _usingOnPositionAudios.remove(audioId);
+    if (_usingOnPositionAudios.containsKey(audioId)) {
+      _usingOnPositionAudios.remove(audioId);
+    }
+    if (undisposedAudio != null) {
+      _usingOnErrorAudios.remove(audioId);
+      WidgetsBinding.instance.removeObserver(playingAudio);
+      _releaseNative(audioId);
+    }
   }
 
   /// Handles callback from native layer, signifying that a newly loaded Audio

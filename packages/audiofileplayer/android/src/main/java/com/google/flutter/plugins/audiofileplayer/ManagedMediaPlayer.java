@@ -135,7 +135,6 @@ abstract class ManagedMediaPlayer implements Player.Listener {
 
   @Override
   public void onPlaybackStateChanged(int playbackState) {
-    Player.Listener.super.onPlaybackStateChanged(playbackState);
     if(playbackState == Player.STATE_ENDED){
       player.seekTo(0);
       parentAudioPlugin.handleCompletion(this.audioId);

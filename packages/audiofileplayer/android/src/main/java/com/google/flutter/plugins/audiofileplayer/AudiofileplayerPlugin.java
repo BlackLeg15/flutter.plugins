@@ -171,7 +171,9 @@ public class AudiofileplayerPlugin
     mediaPlayers.clear();
     mediaPlayers = null;
     context = null;
-    muxStatsExoPlayer.release();
+    if(muxStatsExoPlayer != null){
+        muxStatsExoPlayer.release();
+    }
   }
 
   private void attachToActivity(ActivityPluginBinding activityPluginBinding) {
@@ -280,7 +282,9 @@ public class AudiofileplayerPlugin
       }
       result.success(null);
     } else if (call.method.equals(RELEASE_METHOD)) {
-      muxStatsExoPlayer.release();
+      if(muxStatsExoPlayer != null){
+        muxStatsExoPlayer.release();
+      }
       player.release();
       mediaPlayers.remove(player.getAudioId());
       result.success(null);

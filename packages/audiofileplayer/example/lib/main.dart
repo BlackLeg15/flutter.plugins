@@ -49,7 +49,7 @@ class _MyAppState extends State<MyApp> {
   late Audio _backgroundAudio;
   late bool _backgroundAudioPlaying;
   double? _backgroundAudioDurationSeconds;
-  double _backgroundAudioPositionSeconds = 0;
+  final double _backgroundAudioPositionSeconds = 0;
 
   /// Local file data for the fifth card.
   late Audio _documentAudio;
@@ -64,30 +64,8 @@ class _MyAppState extends State<MyApp> {
   void initState() {
     super.initState();
     AudioSystem.instance.addMediaEventListener(_mediaEventListener);
-    // First card.
-    _audio = Audio.load('assets/audio/printermanual.m4a',
-        onComplete: () => setState(() => _audioPlaying = false),
-        onDuration: (double durationSeconds) =>
-            setState(() => _audioDurationSeconds = durationSeconds),
-        onPosition: (double positionSeconds) => setState(() {
-              _audioPositionSeconds = positionSeconds;
-              _seekSliderValue = _audioPositionSeconds! / _audioDurationSeconds!;
-            }));
-    // Second card.
-    _loadAudioByteData();
     // Third card
     _loadRemoteAudio();
-    // Fourth card.
-    _backgroundAudio = Audio.load('assets/audio/printermanual.m4a',
-        onDuration: (double durationSeconds) =>
-            _backgroundAudioDurationSeconds = durationSeconds,
-        onPosition: (double positionSeconds) =>
-            _backgroundAudioPositionSeconds = positionSeconds,
-        looping: true,
-        playInBackground: true);
-    _backgroundAudioPlaying = false;
-    // Fifth card.
-    _loadDocumentPathAudio();
   }
 
   @override
@@ -139,9 +117,9 @@ class _MyAppState extends State<MyApp> {
     } else if (type == MediaActionType.pause) {
       _pauseBackgroundAudio();
     } else if (type == MediaActionType.playPause) {
-      _backgroundAudioPlaying
-          ? _pauseBackgroundAudio()
-          : _resumeBackgroundAudio();
+      // _backgroundAudioPlaying
+      //     ? _pauseBackgroundAudio()
+      //     : _resumeBackgroundAudio();
     } else if (type == MediaActionType.stop) {
       _stopBackgroundAudio();
     } else if (type == MediaActionType.seekTo) {
@@ -177,7 +155,7 @@ class _MyAppState extends State<MyApp> {
   void _loadRemoteAudio() {
     _remoteErrorMessage = null;
     _remoteAudioLoading = true;
-    _remoteAudio = Audio.loadFromRemoteUrl('https://streams.kqed.org/kqedradio',
+    _remoteAudio = Audio.loadFromRemoteUrl('https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg',
         onDuration: (_) => setState(() => _remoteAudioLoading = false),
         onError: (String? message) => setState(() {
               _remoteErrorMessage = message;
@@ -446,12 +424,12 @@ class _MyAppState extends State<MyApp> {
             'Example 4: background playback with notification/lockscreen data.',
             textAlign: TextAlign.center,
           ),
-          _transportButtonWithTitle(
-              _backgroundAudioPlaying ? 'pause' : 'resume',
-              _backgroundAudioPlaying,
-              () => _backgroundAudioPlaying
-                  ? _pauseBackgroundAudio()
-                  : _resumeBackgroundAudio()),
+          // _transportButtonWithTitle(
+          //     _backgroundAudioPlaying ? 'pause' : 'resume',
+          //     _backgroundAudioPlaying,
+          //     () => _backgroundAudioPlaying
+          //         ? _pauseBackgroundAudio()
+          //         : _resumeBackgroundAudio()),
         ]),
         _cardWrapper(<Widget>[
           Text(
